@@ -2,9 +2,14 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 import pandas as pd
 import joblib
+import logging
+import json
 from datetime import datetime, timezone
 
 # Load trained model
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("heart-disease-api")
+
 model = joblib.load("heart_disease_model.joblib")
 
 app = FastAPI(
@@ -52,6 +57,14 @@ def predict(patient: PatientData):
 
     prediction = int(model.predict(input_data)[0])
     probability = float(model.predict_proba(input_data)[0][1])
+
+    logger.info(json.dumps({
+        "event": "prediction",
+        "inputs": patient.model_dump(),
+        "prediction": prediction,
+        "probability": round(probability, 4),
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }))
 
     return {
         "prediction": prediction,
